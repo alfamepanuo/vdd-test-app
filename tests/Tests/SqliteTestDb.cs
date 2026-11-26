@@ -7,6 +7,8 @@ public sealed class SqliteTestDb : IDisposable
 {
     private readonly SqliteConnection _connection = new("Data Source=:memory:");
 
+    public SqliteConnection Connection => _connection;
+
     public SqliteTestDb() => _connection.Open();
 
     public DbContextOptions<T> Options<T>() where T : DbContext =>
