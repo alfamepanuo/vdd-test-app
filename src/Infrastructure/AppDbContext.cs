@@ -19,19 +19,35 @@ public class AppDbContext : DbContext, IUnitOfWork
         _dispatcher = dispatcher;
     }
 
-    public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    public override int SaveChanges(bool acceptAllChangesOnSuccess)
     {
-        var aggregates = ChangeTracker.Entries<AggregateRoot>()
-            .Select(e => e.Entity)
-            .Where(a => a.DomainEvents.Count > 0)
-            .ToList();
+        var aggregates = PendingAggregates();
         var events = aggregates.SelectMany(a => a.DomainEvents).ToList();
 
-        var result = await base.SaveChangesAsync(cancellationToken);
+        var result = base.SaveChanges(acceptAllChangesOnSuccess);
+
+        _dispatcher.DispatchAsync(events, CancellationToken.None).GetAwaiter().GetResult();
+        aggregates.ForEach(a => a.ClearDomainEvents());
+
+        return result;
+    }
+
+    public override async Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+    {
+        var aggregates = PendingAggregates();
+        var events = aggregates.SelectMany(a => a.DomainEvents).ToList();
+
+        var result = await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
 
         await _dispatcher.DispatchAsync(events, cancellationToken);
         aggregates.ForEach(a => a.ClearDomainEvents());
 
         return result;
     }
+
+    private List<AggregateRoot> PendingAggregates() =>
+        ChangeTracker.Entries<AggregateRoot>()
+            .Select(e => e.Entity)
+            .Where(a => a.DomainEvents.Count > 0)
+            .ToList();
 }
