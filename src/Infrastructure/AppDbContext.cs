@@ -29,8 +29,8 @@ public class AppDbContext : DbContext, IUnitOfWork
 
         var result = await base.SaveChangesAsync(cancellationToken);
 
-        aggregates.ForEach(a => a.ClearDomainEvents());
         await _dispatcher.DispatchAsync(events, cancellationToken);
+        aggregates.ForEach(a => a.ClearDomainEvents());
 
         return result;
     }
