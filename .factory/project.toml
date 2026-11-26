@@ -1,0 +1,19 @@
+schema = 1
+
+[environment]
+kind = "image"
+image = "mcr.microsoft.com/dotnet/sdk:9.0"
+
+[commands]
+setup = "dotnet restore"
+format = "dotnet format"
+lint = "dotnet format --verify-no-changes"
+typecheck = "dotnet build --no-restore"
+
+[commands.test.unit]
+run = "dotnet test --no-restore --logger \"junit;LogFilePath=$PWD/reports/unit.xml\""
+report = "reports/unit.xml"
+
+[paths]
+tests = ["tests/**"]
+docs = ["README.md"]
